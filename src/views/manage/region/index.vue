@@ -61,9 +61,11 @@
       <el-table-column type="selection" width="55" align="center" />
       <el-table-column label="序号" type="index" prop="id" align="center" width="70" />
       <el-table-column label="区域名称" align="center" prop="regionName" />
+       <el-table-column label="点位数" align="center" prop="nodeCount" />
       <el-table-column label="备注说明" align="center" prop="remark" />
       <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
         <template #default="scope">
+           <el-button link type="primary" @click="handleDetail(scope.row)"  v-hasPermi="['manage:node:list']">查看详情</el-button>
           <el-button link type="primary" icon="Edit" @click="handleUpdate(scope.row)" v-hasPermi="['manage:region:edit']">修改</el-button>
           <el-button link type="primary" icon="Delete" @click="handleDelete(scope.row)" v-hasPermi="['manage:region:remove']">删除</el-button>
         </template>
@@ -95,15 +97,34 @@
         </div>
       </template>
     </el-dialog>
+    <!-- 区域管理详情对话框 -->
+    <el-dialog :title="title" v-model="regionInfoOpen" width="500px" append-to-body>
+       <el-form ref="regionInfoRef" :model="form" :rules="rules" label-width="80px">
+        <el-form-item label="区域名称" prop="regionName">
+          <el-input v-model="form.regionName" placeholder="请输入区域名称" disabled />
+        </el-form-item>
+         <el-form-item label="包含点位" prop="nodeCount">
+         <el-table :data="nodeList" >
+             
+              <el-table-column label="序号" type="index" prop="id" align="center" width="70" />
+              <el-table-column label="点位名称" align="center" prop="nodeName" />
+              <el-table-column label="设备数量" align="center" prop="vmCount" />
+             
+    </el-table>
+         </el-form-item>
+      </el-form>
+    </el-dialog>
+
   </div>
 </template>
 
 <script setup name="Region">
 import { listRegion, getRegion, delRegion, addRegion, updateRegion } from "@/api/manage/region";
-
+import { listNode } from "@/api/manage/node";
 const { proxy } = getCurrentInstance();
 
 const regionList = ref([]);
+const nodeList = ref([]);
 const open = ref(false);
 const loading = ref(true);
 const showSearch = ref(true);
@@ -112,7 +133,7 @@ const single = ref(true);
 const multiple = ref(true);
 const total = ref(0);
 const title = ref("");
-
+const regionInfoOpen = ref(false);
 const data = reactive({
   form: {},
   queryParams: {
@@ -198,6 +219,22 @@ function handleUpdate(row) {
     title.value = "修改区域管理";
   });
 }
+
+
+/** 查看详情按钮操作 */
+function handleDetail(row) {
+  reset();
+  const _id = row.id || ids.value
+  getRegion(_id).then(response => {
+    form.value = response.data;
+  });
+  listNode({regionId: _id, pageNum: 1, pageSize: 100000}).then(response => {
+    nodeList.value = response.rows;
+  })
+  regionInfoOpen.value = true;
+}
+
+
 
 /** 提交按钮 */
 function submitForm() {
